@@ -14,9 +14,7 @@ import (
 )
 
 const (
-	ExistingPhotoFileID     = "AgACAgIAAxkDAAEBFUZhIALQ9pZN4BUe8ZSzUU_2foSo1AACnrMxG0BucEhezsBWOgcikQEAAwIAA20AAyAE"
-	ExistingDocumentFileID  = "BQADAgADOQADjMcoCcioX1GrDvp3Ag"
-	ExistingAudioFileID     = "BQADAgADRgADjMcoCdXg3lSIN49lAg"
+	ExistingDocumentFileID  = "BQACAgQAAxkBAAIBlWWq0525h50qLvTvedniXBoF-0cNAAJNFAACtIdZUaDyZwc4Cj8cNAQ"
 	ExistingVoiceFileID     = "AwADAgADWQADjMcoCeul6r_q52IyAg"
 	ExistingVideoFileID     = "BAADAgADZgADjMcoCav432kYe0FRAg"
 	ExistingVideoNoteFileID = "DQADAgADdQAD70cQSUK41dLsRMqfAg"
@@ -83,8 +81,9 @@ func TestGetUpdates(t *testing.T) {
 
 	u := tgbotapi.NewUpdate(0)
 
-	_, err := bot.GetUpdates(u)
+	up, err := bot.GetUpdates(u)
 	require.NoError(t, err)
+	require.NotNil(t, up)
 }
 
 func TestSendWithMessage(t *testing.T) {
@@ -170,12 +169,29 @@ func TestSendWithNewPhotoReply(t *testing.T) {
 }
 
 func TestSendNewPhotoToChannel(t *testing.T) {
-	bot, _ := getBot(t)
-
-	msg := tgbotapi.NewPhotoToChannel(Channel, tgbotapi.FilePath("./image.jpg"))
-	msg.Caption = "Test"
-	_, err := bot.Send(msg)
+	var photoID string
+	bot, err := getBot(t)
 	require.NoError(t, err)
+
+	t.Run("send photo to channel", func(t *testing.T) {
+		msg := tgbotapi.NewPhotoToChannel(Channel, tgbotapi.FilePath("./image.jpg"))
+		msg.Caption = "Test"
+		m, err := bot.Send(msg)
+		require.NoError(t, err)
+		require.NotNil(t, m)
+		pl := len(m.Photo) > 0
+		require.True(t, pl)
+		photoID = m.Photo[0].FileID
+	})
+
+	t.Run("send photo to channel with existing photo", func(t *testing.T) {
+		msg := tgbotapi.NewPhoto(ChatID, tgbotapi.FileID(photoID))
+		msg.Caption = "Test existing"
+		m, err := bot.Send(msg)
+		require.NoError(t, err)
+		require.NotEmpty(t, m)
+	})
+
 }
 
 func TestSendNewPhotoToChannelFileBytes(t *testing.T) {
@@ -198,22 +214,11 @@ func TestSendNewPhotoToChannelFileReader(t *testing.T) {
 
 	msg := tgbotapi.NewPhotoToChannel(Channel, reader)
 	msg.Caption = "Test"
-	_, err := bot.Send(msg)
+	m, err := bot.Send(msg)
 	require.NoError(t, err)
-}
+	require.NotNil(t, m)
 
-// TODO: fix this
-//func TestSendWithExistingPhoto(t *testing.T) {
-//	bot, _ := getBot(t)
-//
-//	msg := tgbotapi.NewPhoto(ChatID, tgbotapi.FileID(ExistingPhotoFileID))
-//	msg.Caption = "Test"
-//	_, err := bot.Send(msg)
-//
-//	if err != nil {
-//		t.Error(err)
-//	}
-//}
+}
 
 func TestSendWithNewDocument(t *testing.T) {
 	bot, _ := getBot(t)
@@ -224,52 +229,56 @@ func TestSendWithNewDocument(t *testing.T) {
 }
 
 func TestSendWithNewDocumentAndThumb(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	msg := tgbotapi.NewDocument(ChatID, tgbotapi.FilePath("./voice.ogg"))
 	msg.Thumb = tgbotapi.FilePath("./image.jpg")
-	_, err := bot.Send(msg)
+	m, err := bot.Send(msg)
+	require.NoError(t, err)
+	require.NotNil(t, m)
+	require.NotEmpty(t, m.Document.FileID)
+
+}
+
+func TestSendWithExistingDocument(t *testing.T) {
+	bot, err := getBot(t)
+	require.NoError(t, err)
+
+	msg := tgbotapi.NewDocument(ChatID, tgbotapi.FileID(ExistingDocumentFileID))
+	m, err := bot.Send(msg)
+	require.NotNil(t, m)
 	require.NoError(t, err)
 }
 
-// TODO: fix this
-//func TestSendWithExistingDocument(t *testing.T) {
-//	bot, _ := getBot(t)
-//
-//	msg := tgbotapi.NewDocument(ChatID, tgbotapi.FileID(ExistingDocumentFileID))
-//	_, err := bot.Send(msg)
-//
-//	if err != nil {
-//		t.Error(err)
-//	}
-//}
-
-func TestSendWithNewAudio(t *testing.T) {
-	bot, _ := getBot(t)
-
-	msg := tgbotapi.NewAudio(ChatID, tgbotapi.FilePath("./audio.mp3"))
-	msg.Title = "TEST"
-	msg.Duration = 10
-	msg.Performer = "TEST"
-	_, err := bot.Send(msg)
+func TestSendWithAudio(t *testing.T) {
+	var FileID string
+	bot, err := getBot(t)
 	require.NoError(t, err)
-}
 
-// TODO: fix this
-//func TestSendWithExistingAudio(t *testing.T) {
-//	bot, _ := getBot(t)
-//
-//	msg := tgbotapi.NewAudio(ChatID, tgbotapi.FileID(ExistingAudioFileID))
-//	msg.Title = "TEST"
-//	msg.Duration = 10
-//	msg.Performer = "TEST"
-//
-//	_, err := bot.Send(msg)
-//
-//	if err != nil {
-//		t.Error(err)
-//	}
-//}
+	t.Run("send new audio file", func(t *testing.T) {
+
+		msg := tgbotapi.NewAudio(ChatID, tgbotapi.FilePath("./audio.mp3"))
+		msg.Title = "TEST"
+		msg.Duration = 10
+		msg.Performer = "TEST"
+		m, err := bot.Send(msg)
+		require.NotNil(t, m)
+		require.NoError(t, err)
+		require.NotEmpty(t, m.Audio.FileID)
+		FileID = m.Audio.FileID
+	})
+
+	t.Run("send existing audio file", func(t *testing.T) {
+		msgExist := tgbotapi.NewAudio(ChatID, tgbotapi.FileID(FileID))
+		msgExist.Title = "TEST EXIST"
+		msgExist.Duration = 10
+		msgExist.Performer = "TEST EXIST"
+		m, err := bot.Send(msgExist)
+		require.NotNil(t, m)
+		require.NoError(t, err)
+	})
+}
 
 func TestSendWithNewVoice(t *testing.T) {
 	bot, _ := getBot(t)
@@ -346,7 +355,6 @@ func TestSendWithNewVideo(t *testing.T) {
 
 func TestSendWithNewVideoNote(t *testing.T) {
 	bot, _ := getBot(t)
-
 	msg := tgbotapi.NewVideoNote(ChatID, 240, tgbotapi.FilePath("./videonote.mp4"))
 	msg.Duration = 10
 
