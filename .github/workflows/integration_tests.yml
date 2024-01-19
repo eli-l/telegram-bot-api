@@ -32,7 +32,7 @@ jobs:
       run: go build -v .
 
     - name: Test
-      run: go test -coverprofile=coverage.out -covermode=atomic -v tests/.
+      run: go test -coverprofile=coverage.out -covermode=atomic -v ./tests/.
 
     - name: Upload coverage report
       uses: codecov/codecov-action@v1
