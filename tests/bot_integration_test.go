@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -13,11 +14,6 @@ import (
 )
 
 const (
-	TestToken               = "6152026236:AAHccoTeFxTezeSceAOKRMZW_A5vaIFo4aI"
-	ChatID                  = 6064981043
-	Channel                 = "@testapiintegration"
-	SupergroupChatID        = -1002055786965
-	ReplyToMessageID        = 1
 	ExistingPhotoFileID     = "AgACAgIAAxkDAAEBFUZhIALQ9pZN4BUe8ZSzUU_2foSo1AACnrMxG0BucEhezsBWOgcikQEAAwIAA20AAyAE"
 	ExistingDocumentFileID  = "BQADAgADOQADjMcoCcioX1GrDvp3Ag"
 	ExistingAudioFileID     = "BQADAgADRgADjMcoCdXg3lSIN49lAg"
@@ -26,6 +22,32 @@ const (
 	ExistingVideoNoteFileID = "DQADAgADdQAD70cQSUK41dLsRMqfAg"
 	ExistingStickerFileID   = "BQADAgADcwADjMcoCbdl-6eB--YPAg"
 )
+
+var (
+	TestToken        string
+	Channel          string
+	ChatID           int64
+	SupergroupChatID int64
+	ReplyToMessageID int
+)
+
+func init() {
+	var err error
+	TestToken = os.Getenv("TELEGRAM_TESTBOT_TOKEN")
+	SupergroupChatID, err = strconv.ParseInt(os.Getenv("TELEGRAM_SUPERGROUP_CHAT_ID"), 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	Channel = os.Getenv("TELEGRAM_CHANNEL")
+	ChatID, err = strconv.ParseInt(os.Getenv("TELEGRAM_CHAT_ID"), 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	ReplyToMessageID, err = strconv.Atoi(os.Getenv("TELEGRAM_REPLY_TO_MESSAGE_ID"))
+	if err != nil {
+		panic(err)
+	}
+}
 
 type testLogger struct {
 	t *testing.T

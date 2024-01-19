@@ -12,31 +12,11 @@ import (
 )
 
 const (
-	TestToken               = "153667468:AAHlSHlMqSt1f_uFmVRJbm5gntu2HI4WW8I"
-	ChatID                  = 76918703
-	Channel                 = "@tgbotapitest"
-	SupergroupChatID        = -1001120141283
-	ReplyToMessageID        = 35
-	ExistingPhotoFileID     = "AgACAgIAAxkDAAEBFUZhIALQ9pZN4BUe8ZSzUU_2foSo1AACnrMxG0BucEhezsBWOgcikQEAAwIAA20AAyAE"
-	ExistingDocumentFileID  = "BQADAgADOQADjMcoCcioX1GrDvp3Ag"
-	ExistingAudioFileID     = "BQADAgADRgADjMcoCdXg3lSIN49lAg"
-	ExistingVoiceFileID     = "AwADAgADWQADjMcoCeul6r_q52IyAg"
-	ExistingVideoFileID     = "BAADAgADZgADjMcoCav432kYe0FRAg"
-	ExistingVideoNoteFileID = "DQADAgADdQAD70cQSUK41dLsRMqfAg"
-	ExistingStickerFileID   = "BQADAgADcwADjMcoCbdl-6eB--YPAg"
+	TestToken        = "153667468:AAHlSHlMqSt1f_uFmVRJbm5gntu2HI4WW8I"
+	ChatID           = 111
+	SupergroupChatID = -1111
+	ReplyToMessageID = 1
 )
-
-type testLogger struct {
-	t *testing.T
-}
-
-func (t testLogger) Println(v ...interface{}) {
-	t.t.Log(v...)
-}
-
-func (t testLogger) Printf(format string, v ...interface{}) {
-	t.t.Logf(format, v...)
-}
 
 func prepareHttpClient(t *testing.T) *MockHTTPClient {
 	ctrl := gomock.NewController(t)
