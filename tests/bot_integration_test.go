@@ -845,7 +845,6 @@ func TestCommands(t *testing.T) {
 	require.Equal(t, "a private command", commands[0].Description)
 }
 
-// TODO: figure out why test is failing
 func TestEditMessageMedia(t *testing.T) {
 	bot, err := getBot(t)
 	require.NoError(t, err)
@@ -871,4 +870,40 @@ func TestEditMessageMedia(t *testing.T) {
 	res, err := bot.Request(edit)
 	require.NoError(t, err)
 	require.NotNil(t, res)
+}
+
+func TestSetReaction(t *testing.T) {
+	bot, err := getBot(t)
+	require.NoError(t, err)
+
+	t.Run("set reaction using reaction type", func(t *testing.T) {
+		msg := tgbotapi.NewMessage(ChatID, "An initial message to test reaction type")
+		msg.ParseMode = tgbotapi.ModeMarkdown
+		m, err := bot.Send(msg)
+		require.NoError(t, err)
+		require.NotNil(t, m)
+
+		reaction := tgbotapi.NewSetMessageReactionType(ChatID, m.MessageID, tgbotapi.ReactionType{
+			Type:  "emoji",
+			Emoji: "👍",
+		}, true)
+
+		res, err := bot.Request(reaction)
+		require.NoError(t, err)
+		require.NotNil(t, res)
+	})
+
+	t.Run("set reaction using reaction emoji", func(t *testing.T) {
+		msg := tgbotapi.NewMessage(ChatID, "An initial message to test reaction emoji")
+		msg.ParseMode = tgbotapi.ModeMarkdown
+		m, err := bot.Send(msg)
+		require.NoError(t, err)
+		require.NotNil(t, m)
+
+		reaction := tgbotapi.NewSetMessageReactionEmoji(ChatID, m.MessageID, "👀", true)
+
+		res, err := bot.Request(reaction)
+		require.NoError(t, err)
+		require.NotNil(t, res)
+	})
 }
