@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/eli-l/telegram-bot-api/v5"
+	"github.com/eli-l/telegram-bot-api/v7"
 )
 
 var (
