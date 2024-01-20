@@ -137,15 +137,18 @@ func TestSendWithNewPhoto(t *testing.T) {
 }
 
 func TestSendWithNewPhotoWithFileBytes(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
-	data, _ := os.ReadFile("./image.jpg")
+	data, err := os.ReadFile("./image.jpg")
+	require.NoError(t, err)
 	b := tgbotapi.FileBytes{Name: "image.jpg", Bytes: data}
 
 	msg := tgbotapi.NewPhoto(ChatID, b)
 	msg.Caption = "Test"
-	_, err := bot.Send(msg)
+	m, err := bot.Send(msg)
 	require.NoError(t, err)
+	require.NotNil(t, m)
 }
 
 func TestSendWithNewPhotoWithFileReader(t *testing.T) {
@@ -501,34 +504,38 @@ func TestSendWithDiceWithEmoji(t *testing.T) {
 }
 
 func TestSendChatConfig(t *testing.T) {
-	bot, _ := getBot(t)
-
-	_, err := bot.Request(tgbotapi.NewChatAction(ChatID, tgbotapi.ChatTyping))
+	bot, err := getBot(t)
 	require.NoError(t, err)
+
+	m, err := bot.Request(tgbotapi.NewChatAction(ChatID, tgbotapi.ChatTyping))
+	require.NoError(t, err)
+	require.NotNil(t, m)
 }
 
-// TODO: identify why this isn't working
-// func TestSendEditMessage(t *testing.T) {
-// 	bot, _ := getBot(t)
+func TestSendEditMessage(t *testing.T) {
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
-// 	msg, err := bot.Send(NewMessage(ChatID, "Testing editing."))
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
+	msg, err := bot.Send(tgbotapi.NewMessage(ChatID, "Testing editing."))
+	require.NoError(t, err)
+	require.NotNil(t, msg)
 
-// 	edit := EditMessageTextConfig{
-// 		BaseEdit: BaseEdit{
-// 			ChatID:    ChatID,
-// 			MessageID: msg.MessageID,
-// 		},
-// 		Text: "Updated text.",
-// 	}
+	edit := tgbotapi.EditMessageTextConfig{
+		BaseEdit: tgbotapi.BaseEdit{
+			BaseChatMessage: tgbotapi.BaseChatMessage{
+				MessageID: msg.MessageID,
+				ChatConfig: tgbotapi.ChatConfig{
+					ChatID: ChatID,
+				},
+			},
+		},
+		Text: "Updated text.",
+	}
 
-// 	_, err = bot.Send(edit)
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
-// }
+	m, err := bot.Send(edit)
+	require.NoError(t, err)
+	require.NotNil(t, m)
+}
 
 func TestGetUserProfilePhotos(t *testing.T) {
 	bot, _ := getBot(t)
@@ -839,28 +846,29 @@ func TestCommands(t *testing.T) {
 }
 
 // TODO: figure out why test is failing
-//
-// func TestEditMessageMedia(t *testing.T) {
-// 	bot, _ := getBot(t)
+func TestEditMessageMedia(t *testing.T) {
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
-// 	msg := NewPhoto(ChatID, "./image.jpg")
-// 	msg.Caption = "Test"
-// 	m, err := bot.Send(msg)
+	msg := tgbotapi.NewPhoto(ChatID, tgbotapi.FilePath("./image.jpg"))
+	msg.Caption = "Test"
+	m, err := bot.Send(msg)
+	require.NoError(t, err)
+	require.NotNil(t, m)
 
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
+	edit := tgbotapi.EditMessageMediaConfig{
+		BaseEdit: tgbotapi.BaseEdit{
+			BaseChatMessage: tgbotapi.BaseChatMessage{
+				MessageID: m.MessageID,
+				ChatConfig: tgbotapi.ChatConfig{
+					ChatID: ChatID,
+				},
+			},
+		},
+		Media: tgbotapi.NewInputMediaVideo(tgbotapi.FilePath("./video.mp4")),
+	}
 
-// 	edit := EditMessageMediaConfig{
-// 		BaseEdit: BaseEdit{
-// 			ChatID:    ChatID,
-// 			MessageID: m.MessageID,
-// 		},
-// 		Media: NewInputMediaVideo(FilePath("./video.mp4")),
-// 	}
-
-// 	_, err = bot.Request(edit)
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
-// }
+	res, err := bot.Request(edit)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+}
