@@ -2,7 +2,6 @@ package tests
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"strconv"
 	"testing"
@@ -13,20 +12,13 @@ import (
 	"github.com/eli-l/telegram-bot-api/v5"
 )
 
-const (
-	ExistingDocumentFileID  = "BQACAgQAAxkBAAIBlWWq0525h50qLvTvedniXBoF-0cNAAJNFAACtIdZUaDyZwc4Cj8cNAQ"
-	ExistingVoiceFileID     = "AwADAgADWQADjMcoCeul6r_q52IyAg"
-	ExistingVideoFileID     = "BAADAgADZgADjMcoCav432kYe0FRAg"
-	ExistingVideoNoteFileID = "DQADAgADdQAD70cQSUK41dLsRMqfAg"
-	ExistingStickerFileID   = "BQADAgADcwADjMcoCbdl-6eB--YPAg"
-)
-
 var (
 	TestToken        string
 	Channel          string
 	ChatID           int64
 	SupergroupChatID int64
 	ReplyToMessageID int
+	Debug            = false
 )
 
 func init() {
@@ -62,7 +54,7 @@ func (t testLogger) Printf(format string, v ...interface{}) {
 func getBot(t *testing.T) (*tgbotapi.BotAPI, error) {
 	bot, err := tgbotapi.NewBotAPI(TestToken)
 	require.NoError(t, err)
-	bot.Debug = true
+	bot.Debug = Debug
 
 	logger := testLogger{t}
 	err = tgbotapi.SetLogger(logger)
@@ -72,13 +64,14 @@ func getBot(t *testing.T) (*tgbotapi.BotAPI, error) {
 }
 
 func TestNewBotAPI_notoken(t *testing.T) {
-	_, err := tgbotapi.NewBotAPI("")
+	bot, err := tgbotapi.NewBotAPI("")
 	require.Error(t, err)
+	require.Nil(t, bot)
 }
 
 func TestGetUpdates(t *testing.T) {
-	bot, _ := getBot(t)
-
+	bot, err := getBot(t)
+	require.NoError(t, err)
 	u := tgbotapi.NewUpdate(0)
 
 	up, err := bot.GetUpdates(u)
@@ -87,33 +80,40 @@ func TestGetUpdates(t *testing.T) {
 }
 
 func TestSendWithMessage(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	msg := tgbotapi.NewMessage(ChatID, "A test message from the test library in telegram-bot-api")
 	msg.ParseMode = tgbotapi.ModeMarkdown
-	_, err := bot.Send(msg)
+	m, err := bot.Send(msg)
 	require.NoError(t, err)
+	require.NotNil(t, m)
 }
 
 func TestSendWithMessageReply(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	msg := tgbotapi.NewMessage(ChatID, "A test message from the test library in telegram-bot-api")
 	msg.ReplyParameters.MessageID = ReplyToMessageID
-	_, err := bot.Send(msg)
+	m, err := bot.Send(msg)
 	require.NoError(t, err)
+	require.NotNil(t, m)
 }
 
 func TestSendWithMessageForward(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	msg := tgbotapi.NewForward(ChatID, ChatID, ReplyToMessageID)
-	_, err := bot.Send(msg)
+	m, err := bot.Send(msg)
 	require.NoError(t, err)
+	require.NotNil(t, m)
 }
 
 func TestCopyMessage(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	msg := tgbotapi.NewMessage(ChatID, "A test message from the test library in telegram-bot-api")
 	message, err := bot.Send(msg)
@@ -126,12 +126,14 @@ func TestCopyMessage(t *testing.T) {
 }
 
 func TestSendWithNewPhoto(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	msg := tgbotapi.NewPhoto(ChatID, tgbotapi.FilePath("./image.jpg"))
 	msg.Caption = "Test"
-	_, err := bot.Send(msg)
+	m, err := bot.Send(msg)
 	require.NoError(t, err)
+	require.NotNil(t, m)
 }
 
 func TestSendWithNewPhotoWithFileBytes(t *testing.T) {
@@ -147,25 +149,30 @@ func TestSendWithNewPhotoWithFileBytes(t *testing.T) {
 }
 
 func TestSendWithNewPhotoWithFileReader(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
-	f, _ := os.Open("./image.jpg")
+	f, err := os.Open("./image.jpg")
+	require.NoError(t, err)
 	reader := tgbotapi.FileReader{Name: "image.jpg", Reader: f}
 
 	msg := tgbotapi.NewPhoto(ChatID, reader)
 	msg.Caption = "Test"
-	_, err := bot.Send(msg)
+	m, err := bot.Send(msg)
 	require.NoError(t, err)
+	require.NotNil(t, m)
 }
 
 func TestSendWithNewPhotoReply(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	msg := tgbotapi.NewPhoto(ChatID, tgbotapi.FilePath("./image.jpg"))
 	msg.ReplyParameters.MessageID = ReplyToMessageID
 
-	_, err := bot.Send(msg)
+	m, err := bot.Send(msg)
 	require.NoError(t, err)
+	require.NotNil(t, m)
 }
 
 func TestSendNewPhotoToChannel(t *testing.T) {
@@ -185,6 +192,7 @@ func TestSendNewPhotoToChannel(t *testing.T) {
 	})
 
 	t.Run("send photo to channel with existing photo", func(t *testing.T) {
+		require.NotEmpty(t, photoID)
 		msg := tgbotapi.NewPhoto(ChatID, tgbotapi.FileID(photoID))
 		msg.Caption = "Test existing"
 		m, err := bot.Send(msg)
@@ -195,21 +203,26 @@ func TestSendNewPhotoToChannel(t *testing.T) {
 }
 
 func TestSendNewPhotoToChannelFileBytes(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
-	data, _ := os.ReadFile("./image.jpg")
+	data, err := os.ReadFile("./image.jpg")
+	require.NoError(t, err)
 	b := tgbotapi.FileBytes{Name: "image.jpg", Bytes: data}
 
 	msg := tgbotapi.NewPhotoToChannel(Channel, b)
 	msg.Caption = "Test"
-	_, err := bot.Send(msg)
+	m, err := bot.Send(msg)
 	require.NoError(t, err)
+	require.NotNil(t, m)
 }
 
 func TestSendNewPhotoToChannelFileReader(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
-	f, _ := os.Open("./image.jpg")
+	f, err := os.Open("./image.jpg")
+	require.NoError(t, err)
 	reader := tgbotapi.FileReader{Name: "image.jpg", Reader: f}
 
 	msg := tgbotapi.NewPhotoToChannel(Channel, reader)
@@ -221,34 +234,52 @@ func TestSendNewPhotoToChannelFileReader(t *testing.T) {
 }
 
 func TestSendWithNewDocument(t *testing.T) {
-	bot, _ := getBot(t)
-
-	msg := tgbotapi.NewDocument(ChatID, tgbotapi.FilePath("./image.jpg"))
-	_, err := bot.Send(msg)
+	var FileID string
+	bot, err := getBot(t)
 	require.NoError(t, err)
+
+	t.Run("send new document", func(t *testing.T) {
+		msg := tgbotapi.NewDocument(ChatID, tgbotapi.FilePath("./image.jpg"))
+		m, err := bot.Send(msg)
+		require.NoError(t, err)
+		require.NotNil(t, m)
+		require.NotEmpty(t, m.Document.FileID)
+		FileID = m.Document.FileID
+	})
+
+	t.Run("get document", func(t *testing.T) {
+		f, err := bot.GetFile(tgbotapi.FileConfig{FileID: FileID})
+		require.NoError(t, err)
+		require.NotNil(t, f)
+		require.Equal(t, FileID, f.FileID)
+	})
+
 }
 
 func TestSendWithNewDocumentAndThumb(t *testing.T) {
+	var FileID string
+
 	bot, err := getBot(t)
 	require.NoError(t, err)
 
-	msg := tgbotapi.NewDocument(ChatID, tgbotapi.FilePath("./voice.ogg"))
-	msg.Thumb = tgbotapi.FilePath("./image.jpg")
-	m, err := bot.Send(msg)
-	require.NoError(t, err)
-	require.NotNil(t, m)
-	require.NotEmpty(t, m.Document.FileID)
+	t.Run("send new document and thumb", func(t *testing.T) {
+		msg := tgbotapi.NewDocument(ChatID, tgbotapi.FilePath("./voice.ogg"))
+		msg.Thumb = tgbotapi.FilePath("./image.jpg")
+		m, err := bot.Send(msg)
+		require.NoError(t, err)
+		require.NotNil(t, m)
+		require.NotEmpty(t, m.Document.FileID)
+		FileID = m.Document.FileID
+	})
 
-}
+	t.Run("send existing document", func(t *testing.T) {
+		require.NotEmpty(t, FileID)
+		msg := tgbotapi.NewDocument(ChatID, tgbotapi.FileID(FileID))
+		m, err := bot.Send(msg)
+		require.NotNil(t, m)
+		require.NoError(t, err)
+	})
 
-func TestSendWithExistingDocument(t *testing.T) {
-	bot, err := getBot(t)
-	require.NoError(t, err)
-
-	msg := tgbotapi.NewDocument(ChatID, tgbotapi.FileID(ExistingDocumentFileID))
-	m, err := bot.Send(msg)
-	require.NotNil(t, m)
-	require.NoError(t, err)
 }
 
 func TestSendWithAudio(t *testing.T) {
@@ -270,6 +301,7 @@ func TestSendWithAudio(t *testing.T) {
 	})
 
 	t.Run("send existing audio file", func(t *testing.T) {
+		require.NotEmpty(t, FileID)
 		msgExist := tgbotapi.NewAudio(ChatID, tgbotapi.FileID(FileID))
 		msgExist.Title = "TEST EXIST"
 		msgExist.Duration = 10
@@ -281,182 +313,192 @@ func TestSendWithAudio(t *testing.T) {
 }
 
 func TestSendWithNewVoice(t *testing.T) {
-	bot, _ := getBot(t)
+	var FileID string
 
-	msg := tgbotapi.NewVoice(ChatID, tgbotapi.FilePath("./voice.ogg"))
-	msg.Duration = 10
-	_, err := bot.Send(msg)
+	bot, err := getBot(t)
 	require.NoError(t, err)
+
+	t.Run("send new voice file", func(t *testing.T) {
+		msg := tgbotapi.NewVoice(ChatID, tgbotapi.FilePath("./voice.ogg"))
+		msg.Duration = 10
+		m, err := bot.Send(msg)
+		require.NoError(t, err)
+		require.NotNil(t, m)
+		require.NotEmpty(t, m.Voice.FileID)
+		FileID = m.Voice.FileID
+	})
+
+	t.Run("send existing voice file", func(t *testing.T) {
+		require.NotEmpty(t, FileID)
+		msg := tgbotapi.NewVoice(ChatID, tgbotapi.FileID(FileID))
+		msg.Duration = 10
+		m, err := bot.Send(msg)
+		require.NoError(t, err)
+		require.NotNil(t, m)
+	})
 }
 
-// TODO: fix this
-//func TestSendWithExistingVoice(t *testing.T) {
-//	bot, _ := getBot(t)
-//
-//	msg := tgbotapi.NewVoice(ChatID, tgbotapi.FileID(ExistingVoiceFileID))
-//	msg.Duration = 10
-//	_, err := bot.Send(msg)
-//
-//	if err != nil {
-//		t.Error(err)
-//	}
-//}
-
 func TestSendWithContact(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	contact := tgbotapi.NewContact(ChatID, "5551234567", "Test")
 
-	_, err := bot.Send(contact)
+	m, err := bot.Send(contact)
 	require.NoError(t, err)
+	require.NotNil(t, m)
 }
 
 func TestSendWithLocation(t *testing.T) {
-	bot, _ := getBot(t)
-
-	_, err := bot.Send(tgbotapi.NewLocation(ChatID, 40, 40))
+	bot, err := getBot(t)
 	require.NoError(t, err)
+
+	m, err := bot.Send(tgbotapi.NewLocation(ChatID, 40, 40))
+	require.NoError(t, err)
+	require.NotNil(t, m)
 }
 
 func TestSendWithVenue(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	venue := tgbotapi.NewVenue(ChatID, "A Test Location", "123 Test Street", 40, 40)
 
-	_, err := bot.Send(venue)
+	m, err := bot.Send(venue)
 	require.NoError(t, err)
+	require.NotNil(t, m)
 }
 
 func TestSendWithNewVideo(t *testing.T) {
-	bot, _ := getBot(t)
+	var FileID string
 
-	msg := tgbotapi.NewVideo(ChatID, tgbotapi.FilePath("./video.mp4"))
-	msg.Duration = 10
-	msg.Caption = "TEST"
-
-	_, err := bot.Send(msg)
+	bot, err := getBot(t)
 	require.NoError(t, err)
-}
 
-// TODO: fix this
-//func TestSendWithExistingVideo(t *testing.T) {
-//	bot, _ := getBot(t)
-//
-//	msg := tgbotapi.NewVideo(ChatID, tgbotapi.FileID(ExistingVideoFileID))
-//	msg.Duration = 10
-//	msg.Caption = "TEST"
-//
-//	_, err := bot.Send(msg)
-//
-//	if err != nil {
-//		t.Error(err)
-//	}
-//}
+	t.Run("send new video file", func(t *testing.T) {
+		msg := tgbotapi.NewVideo(ChatID, tgbotapi.FilePath("./video.mp4"))
+		msg.Duration = 10
+		msg.Caption = "TEST"
+
+		m, err := bot.Send(msg)
+		require.NoError(t, err)
+		require.NotNil(t, m)
+		require.NotEmpty(t, m.Video.FileID)
+		FileID = m.Video.FileID
+	})
+
+	t.Run("send existing video file", func(t *testing.T) {
+		require.NotEmpty(t, FileID)
+		msg := tgbotapi.NewVideo(ChatID, tgbotapi.FileID(FileID))
+		msg.Duration = 10
+		msg.Caption = "TEST EXIST"
+		m, err := bot.Send(msg)
+		require.NoError(t, err)
+		require.NotNil(t, m)
+	})
+}
 
 func TestSendWithNewVideoNote(t *testing.T) {
-	bot, _ := getBot(t)
-	msg := tgbotapi.NewVideoNote(ChatID, 240, tgbotapi.FilePath("./videonote.mp4"))
-	msg.Duration = 10
+	var FileID string
 
-	_, err := bot.Send(msg)
+	bot, err := getBot(t)
 	require.NoError(t, err)
-}
 
-// TODO: fix this
-//func TestSendWithExistingVideoNote(t *testing.T) {
-//	bot, _ := getBot(t)
-//
-//	msg := tgbotapi.NewVideoNote(ChatID, 240, tgbotapi.FileID(ExistingVideoNoteFileID))
-//	msg.Duration = 10
-//
-//	_, err := bot.Send(msg)
-//
-//	if err != nil {
-//		t.Error(err)
-//	}
-//}
+	t.Run("send new video note file", func(t *testing.T) {
+		msg := tgbotapi.NewVideoNote(ChatID, 240, tgbotapi.FilePath("./videonote.mp4"))
+		msg.Duration = 10
+
+		m, err := bot.Send(msg)
+		require.NoError(t, err)
+		require.NotEmpty(t, m.VideoNote.FileID)
+		FileID = m.VideoNote.FileID
+	})
+
+	t.Run("send existing video note file", func(t *testing.T) {
+		require.NotEmpty(t, FileID)
+		msg := tgbotapi.NewVideoNote(ChatID, 240, tgbotapi.FileID(FileID))
+		msg.Duration = 10
+		m, err := bot.Send(msg)
+		require.NoError(t, err)
+		require.NotNil(t, m)
+	})
+}
 
 func TestSendWithNewSticker(t *testing.T) {
-	bot, _ := getBot(t)
+	var FileID string
 
-	msg := tgbotapi.NewSticker(ChatID, tgbotapi.FilePath("./image.jpg"))
-
-	_, err := bot.Send(msg)
+	bot, err := getBot(t)
 	require.NoError(t, err)
-}
 
-// TODO: fix this
-//func TestSendWithExistingSticker(t *testing.T) {
-//	bot, _ := getBot(t)
-//
-//	msg := tgbotapi.NewSticker(ChatID, tgbotapi.FileID(ExistingStickerFileID))
-//
-//	_, err := bot.Send(msg)
-//
-//	if err != nil {
-//		t.Error(err)
-//	}
-//}
+	t.Run("send new sticker file", func(t *testing.T) {
+		msg := tgbotapi.NewSticker(ChatID, tgbotapi.FilePath("./image.jpg"))
+		m, err := bot.Send(msg)
+		require.NoError(t, err)
+		require.NotNil(t, m)
+		require.NotEmpty(t, m.Sticker.FileID)
+		FileID = m.Sticker.FileID
+	})
+
+	t.Run("send existing sticker file", func(t *testing.T) {
+		require.NotEmpty(t, FileID)
+		msg := tgbotapi.NewSticker(ChatID, tgbotapi.FileID(FileID))
+		m, err := bot.Send(msg)
+		require.NoError(t, err)
+		require.NotNil(t, m)
+	})
+}
 
 func TestSendWithNewStickerAndKeyboardHide(t *testing.T) {
-	bot, _ := getBot(t)
+	var FileID string
 
-	msg := tgbotapi.NewSticker(ChatID, tgbotapi.FilePath("./image.jpg"))
-	msg.ReplyMarkup = tgbotapi.ReplyKeyboardRemove{
-		RemoveKeyboard: true,
-		Selective:      false,
-	}
-	_, err := bot.Send(msg)
+	bot, err := getBot(t)
 	require.NoError(t, err)
+
+	t.Run("send new sticker file", func(t *testing.T) {
+		msg := tgbotapi.NewSticker(ChatID, tgbotapi.FilePath("./image.jpg"))
+		msg.ReplyMarkup = tgbotapi.ReplyKeyboardRemove{
+			RemoveKeyboard: true,
+			Selective:      false,
+		}
+		m, err := bot.Send(msg)
+		require.NoError(t, err)
+		require.NotNil(t, m)
+		require.NotEmpty(t, m.Sticker.FileID)
+		FileID = m.Sticker.FileID
+	})
+
+	t.Run("send existing sticker file", func(t *testing.T) {
+		require.NotEmpty(t, FileID)
+		msg := tgbotapi.NewSticker(ChatID, tgbotapi.FileID(FileID))
+		msg.ReplyMarkup = tgbotapi.ReplyKeyboardRemove{
+			RemoveKeyboard: true,
+			Selective:      false,
+		}
+		m, err := bot.Send(msg)
+		require.NoError(t, err)
+		require.NotNil(t, m)
+	})
 }
 
-// TODO: fix this
-//func TestSendWithExistingStickerAndKeyboardHide(t *testing.T) {
-//	bot, _ := getBot(t)
-//
-//	msg := tgbotapi.NewSticker(ChatID, tgbotapi.FileID(ExistingStickerFileID))
-//	msg.ReplyMarkup = tgbotapi.ReplyKeyboardRemove{
-//		RemoveKeyboard: true,
-//		Selective:      false,
-//	}
-//
-//	_, err := bot.Send(msg)
-//
-//	if err != nil {
-//		t.Error(err)
-//	}
-//}
-
 func TestSendWithDice(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	msg := tgbotapi.NewDice(ChatID)
-	_, err := bot.Send(msg)
+	m, err := bot.Send(msg)
 	require.NoError(t, err)
+	require.NotNil(t, m)
 }
 
 func TestSendWithDiceWithEmoji(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	msg := tgbotapi.NewDiceWithEmoji(ChatID, "🏀")
-	_, err := bot.Send(msg)
+	m, err := bot.Send(msg)
 	require.NoError(t, err)
+	require.NotNil(t, m)
 }
-
-// TODO: fix this
-//func TestGetFile(t *testing.T) {
-//	bot, _ := getBot(t)
-//
-//	file := tgbotapi.FileConfig{
-//		FileID: ExistingPhotoFileID,
-//	}
-//
-//	_, err := bot.GetFile(file)
-//
-//	if err != nil {
-//		t.Error(err)
-//	}
-//}
 
 func TestSendChatConfig(t *testing.T) {
 	bot, _ := getBot(t)
@@ -515,7 +557,8 @@ func TestSetWebhookWithCert(t *testing.T) {
 }
 
 func TestSetWebhookWithoutCert(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	time.Sleep(time.Second * 2)
 
@@ -536,7 +579,8 @@ func TestSetWebhookWithoutCert(t *testing.T) {
 }
 
 func TestSendWithMediaGroupPhotoVideo(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	cfg := tgbotapi.NewMediaGroup(ChatID, []interface{}{
 		tgbotapi.NewInputMediaPhoto(tgbotapi.FileURL("https://github.com/go-telegram-bot-api/telegram-bot-api/raw/0a3a1c8716c4cd8d26a262af9f12dcbab7f3f28c/tests/image.jpg")),
@@ -551,7 +595,8 @@ func TestSendWithMediaGroupPhotoVideo(t *testing.T) {
 }
 
 func TestSendWithMediaGroupDocument(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	cfg := tgbotapi.NewMediaGroup(ChatID, []interface{}{
 		tgbotapi.NewInputMediaDocument(tgbotapi.FileURL("https://i.imgur.com/unQLJIb.jpg")),
@@ -565,7 +610,8 @@ func TestSendWithMediaGroupDocument(t *testing.T) {
 }
 
 func TestSendWithMediaGroupAudio(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	cfg := tgbotapi.NewMediaGroup(ChatID, []interface{}{
 		tgbotapi.NewInputMediaAudio(tgbotapi.FilePath("./audio.mp3")),
@@ -576,122 +622,6 @@ func TestSendWithMediaGroupAudio(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, messages)
 	require.Equal(t, len(cfg.Media), len(messages))
-}
-
-func ExampleNewBotAPI() {
-	bot, err := tgbotapi.NewBotAPI("MyAwesomeBotToken")
-	if err != nil {
-		panic(err)
-	}
-
-	bot.Debug = true
-
-	fmt.Printf("Authorized on account %s", bot.Self.UserName)
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
-
-	updates := bot.GetUpdatesChan(u)
-
-	// Optional: wait for updates and clear them if you don't want to handle
-	// a large backlog of old messages
-	time.Sleep(time.Millisecond * 500)
-	updates.Clear()
-
-	for update := range updates {
-		if update.Message == nil {
-			continue
-		}
-
-		fmt.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
-
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-		msg.ReplyParameters.MessageID = update.Message.MessageID
-
-		_, err := bot.Send(msg)
-		if err != nil {
-			panic(err)
-		}
-	}
-}
-
-func ExampleNewWebhook() {
-	bot, err := tgbotapi.NewBotAPI("MyAwesomeBotToken")
-	if err != nil {
-		panic(err)
-	}
-
-	bot.Debug = true
-
-	fmt.Printf("Authorized on account %s", bot.Self.UserName)
-
-	wh, err := tgbotapi.NewWebhookWithCert("https://www.google.com:8443/"+bot.Token, tgbotapi.FilePath("cert.pem"))
-
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = bot.Request(wh)
-
-	if err != nil {
-		panic(err)
-	}
-
-	info, err := bot.GetWebhookInfo()
-
-	if err != nil {
-		panic(err)
-	}
-
-	if info.LastErrorDate != 0 {
-		fmt.Printf("failed to set webhook: %s", info.LastErrorMessage)
-	}
-
-	updates := bot.ListenForWebhook("/" + bot.Token)
-	go http.ListenAndServeTLS("0.0.0.0:8443", "cert.pem", "key.pem", nil)
-
-	for update := range updates {
-		fmt.Printf("%+v\n", update)
-	}
-}
-
-func ExampleWebhookHandler() {
-	bot, err := tgbotapi.NewBotAPI("MyAwesomeBotToken")
-	if err != nil {
-		panic(err)
-	}
-
-	bot.Debug = true
-
-	fmt.Printf("Authorized on account %s", bot.Self.UserName)
-
-	wh, err := tgbotapi.NewWebhookWithCert("https://www.google.com:8443/"+bot.Token, tgbotapi.FilePath("cert.pem"))
-
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = bot.Request(wh)
-	if err != nil {
-		panic(err)
-	}
-	info, err := bot.GetWebhookInfo()
-	if err != nil {
-		panic(err)
-	}
-	if info.LastErrorDate != 0 {
-		fmt.Printf("[Telegram callback failed]%s", info.LastErrorMessage)
-	}
-
-	http.HandleFunc("/"+bot.Token, func(w http.ResponseWriter, r *http.Request) {
-		update, err := bot.HandleUpdate(r)
-		if err != nil {
-			fmt.Printf("%+v\n", err.Error())
-		} else {
-			fmt.Printf("%+v\n", *update)
-		}
-	})
-
-	go http.ListenAndServeTLS("0.0.0.0:8443", "cert.pem", "key.pem", nil)
 }
 
 func ExampleInlineConfig() {
@@ -864,7 +794,6 @@ func TestPolls(t *testing.T) {
 	}
 }
 
-// TODO: TG reports this as unsupported
 func TestSendDice(t *testing.T) {
 	bot, err := getBot(t)
 	require.NoError(t, err)
@@ -877,51 +806,36 @@ func TestSendDice(t *testing.T) {
 }
 
 func TestCommands(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	setCommands := tgbotapi.NewSetMyCommands(tgbotapi.BotCommand{
 		Command:     "test",
 		Description: "a test command",
 	})
 
-	if _, err := bot.Request(setCommands); err != nil {
-		t.Error("Unable to set commands")
-	}
+	_, err = bot.Request(setCommands)
+	require.NoError(t, err)
 
 	commands, err := bot.GetMyCommands()
-	if err != nil {
-		t.Error("Unable to get commands")
-	}
-
-	if len(commands) != 1 {
-		t.Error("Incorrect number of commands returned")
-	}
-
-	if commands[0].Command != "test" || commands[0].Description != "a test command" {
-		t.Error("Commands were incorrectly set")
-	}
+	require.NoError(t, err)
+	require.Equal(t, 1, len(commands))
+	require.Equal(t, "test", commands[0].Command)
+	require.Equal(t, "a test command", commands[0].Description)
 
 	setCommands = tgbotapi.NewSetMyCommandsWithScope(tgbotapi.NewBotCommandScopeAllPrivateChats(), tgbotapi.BotCommand{
 		Command:     "private",
 		Description: "a private command",
 	})
 
-	if _, err := bot.Request(setCommands); err != nil {
-		t.Error("Unable to set commands")
-	}
+	_, err = bot.Request(setCommands)
+	require.NoError(t, err)
 
 	commands, err = bot.GetMyCommandsWithConfig(tgbotapi.NewGetMyCommandsWithScope(tgbotapi.NewBotCommandScopeAllPrivateChats()))
-	if err != nil {
-		t.Error("Unable to get commands")
-	}
-
-	if len(commands) != 1 {
-		t.Error("Incorrect number of commands returned")
-	}
-
-	if commands[0].Command != "private" || commands[0].Description != "a private command" {
-		t.Error("Commands were incorrectly set")
-	}
+	require.NoError(t, err)
+	require.Equal(t, 1, len(commands))
+	require.Equal(t, "private", commands[0].Command)
+	require.Equal(t, "a private command", commands[0].Description)
 }
 
 // TODO: figure out why test is failing
