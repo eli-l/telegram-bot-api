@@ -688,11 +688,13 @@ func TestDeleteMessage(t *testing.T) {
 }
 
 func TestPinChatMessage(t *testing.T) {
-	bot, _ := getBot(t)
+	bot, err := getBot(t)
+	require.NoError(t, err)
 
 	msg := tgbotapi.NewMessage(SupergroupChatID, "A test message from the test library in telegram-bot-api")
 	msg.ParseMode = tgbotapi.ModeMarkdown
-	message, _ := bot.Send(msg)
+	message, err := bot.Send(msg)
+	require.NoError(t, err)
 
 	pinChatMessageConfig := tgbotapi.PinChatMessageConfig{
 		BaseChatMessage: tgbotapi.BaseChatMessage{
@@ -703,11 +705,9 @@ func TestPinChatMessage(t *testing.T) {
 		},
 		DisableNotification: false,
 	}
-	_, err := bot.Request(pinChatMessageConfig)
-
-	if err != nil {
-		t.Error(err)
-	}
+	res, err := bot.Request(pinChatMessageConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res)
 }
 
 func TestUnpinChatMessage(t *testing.T) {
