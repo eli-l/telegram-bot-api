@@ -4,6 +4,10 @@ go 1.21
 
 require github.com/stretchr/testify v1.8.4
 
+retract (
+ 	v7.0.0 // Missing proper go.mod file
+ )
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
