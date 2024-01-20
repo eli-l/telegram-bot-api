@@ -1141,3 +1141,31 @@ func ValidateWebAppData(token, telegramInitData string) (bool, error) {
 
 	return true, nil
 }
+
+func NewSetMessageReactionType(chatID int64, messageID int, reaction ReactionType, isBig bool) SetMessageReactionConfig {
+	return SetMessageReactionConfig{
+		BaseChatMessage: BaseChatMessage{
+			ChatConfig: ChatConfig{
+				ChatID: chatID,
+			},
+			MessageID: messageID,
+		},
+		Reaction: []ReactionType{reaction},
+		IsBig:    isBig,
+	}
+}
+
+func NewSetMessageReactionEmoji(chatID int64, messageID int, reaction string, isBig bool) SetMessageReactionConfig {
+	return SetMessageReactionConfig{
+		BaseChatMessage: BaseChatMessage{
+			ChatConfig: ChatConfig{
+				ChatID: chatID,
+			},
+			MessageID: messageID,
+		},
+		Reaction: []ReactionType{
+			{Type: "emoji", Emoji: reaction},
+		},
+		IsBig: isBig,
+	}
+}

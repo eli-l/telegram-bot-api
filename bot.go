@@ -746,3 +746,15 @@ func EscapeText(parseMode string, text string) string {
 
 	return replacer.Replace(text)
 }
+
+func (bot *BotAPI) SendReaction(config SetMessageReactionConfig) (Message, error) {
+	resp, err := bot.Request(config)
+	if err != nil {
+		return Message{}, err
+	}
+
+	var message Message
+	err = json.Unmarshal(resp.Result, &message)
+
+	return message, err
+}
