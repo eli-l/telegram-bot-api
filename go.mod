@@ -1,4 +1,4 @@
-module github.com/eli-l/telegram-bot-api/v5
+module github.com/eli-l/telegram-bot-api/v7
 
 go 1.21
 
