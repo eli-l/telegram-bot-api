@@ -16,7 +16,7 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
-// MockHTTPClient is a mock of HTTPClient interface.
+// MockHTTPClient is a mock of HTTPClientI interface.
 type MockHTTPClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockHTTPClientMockRecorder

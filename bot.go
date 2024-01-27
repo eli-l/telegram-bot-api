@@ -14,66 +14,56 @@ import (
 	"time"
 )
 
-// HTTPClient is the type needed for the bot to perform HTTP requests.
-type HTTPClient interface {
+const DefaultBufferSize = 100
+
+// HTTPClientI is the type needed for the bot to perform HTTP requests.
+type HTTPClientI interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
 // BotAPI allows you to interact with the Telegram Bot API.
 type BotAPI struct {
-	Token  string `json:"token"`
-	Debug  bool   `json:"debug"`
-	Buffer int    `json:"buffer"`
+	config   BotConfigI
+	client   HTTPClientI
+	readonly bool
 
-	Self            User       `json:"-"`
-	Client          HTTPClient `json:"-"`
+	buffer          int
 	shutdownChannel chan interface{}
-
-	apiEndpoint string
 }
 
-// NewBotAPI creates a new BotAPI instance.
+// NewBot creates a new BotAPI instance.
 //
 // It requires a token, provided by @BotFather on Telegram.
-func NewBotAPI(token string) (*BotAPI, error) {
-	return NewBotAPIWithClient(token, APIEndpoint, &http.Client{})
+func NewBot(config BotConfigI) *BotAPI {
+	return NewBotWithClient(config, &http.Client{})
 }
 
-// NewBotAPIWithAPIEndpoint creates a new BotAPI instance
-// and allows you to pass API endpoint.
-//
-// It requires a token, provided by @BotFather on Telegram and API endpoint.
-func NewBotAPIWithAPIEndpoint(token, apiEndpoint string) (*BotAPI, error) {
-	return NewBotAPIWithClient(token, apiEndpoint, &http.Client{})
-}
-
-// NewBotAPIWithClient creates a new BotAPI instance
+// NewBotWithClient creates a new BotAPI instance
 // and allows you to pass a http.Client.
 //
 // It requires a token, provided by @BotFather on Telegram and API endpoint.
-func NewBotAPIWithClient(token, apiEndpoint string, client HTTPClient) (*BotAPI, error) {
+func NewBotWithClient(config BotConfigI, client HTTPClientI) *BotAPI {
 	bot := &BotAPI{
-		Token:           token,
-		Client:          client,
-		Buffer:          100,
+		config:          config.(*BotConfig),
+		client:          client,
+		buffer:          DefaultBufferSize,
 		shutdownChannel: make(chan interface{}),
-
-		apiEndpoint: apiEndpoint,
 	}
 
-	self, err := bot.GetMe()
-	if err != nil {
-		return nil, err
-	}
-
-	bot.Self = self
-
-	return bot, nil
+	return bot
 }
 
-// SetAPIEndpoint changes the Telegram Bot API endpoint used by the instance.
-func (bot *BotAPI) SetAPIEndpoint(apiEndpoint string) {
-	bot.apiEndpoint = apiEndpoint
+func (b *BotAPI) GetConfig() BotConfigI {
+	return b.config
+}
+
+func (b *BotAPI) Validate() error {
+	_, err := b.GetMe()
+	return err
+}
+
+func (bot *BotAPI) SetReadonly(readonly bool) {
+	bot.readonly = readonly
 }
 
 func buildParams(in Params) url.Values {
@@ -92,11 +82,11 @@ func buildParams(in Params) url.Values {
 
 // MakeRequest makes a request to a specific endpoint with our token.
 func (bot *BotAPI) MakeRequest(endpoint string, params Params) (*APIResponse, error) {
-	if bot.Debug {
+	if bot.config.GetDebug() {
 		log.Printf("Endpoint: %s, params: %v\n", endpoint, params)
 	}
 
-	method := fmt.Sprintf(bot.apiEndpoint, bot.Token, endpoint)
+	method := fmt.Sprintf(bot.config.GetApiEndpoint(), bot.config.GetToken(), endpoint)
 
 	values := buildParams(params)
 
@@ -106,7 +96,7 @@ func (bot *BotAPI) MakeRequest(endpoint string, params Params) (*APIResponse, er
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := bot.Client.Do(req)
+	resp, err := bot.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +108,7 @@ func (bot *BotAPI) MakeRequest(endpoint string, params Params) (*APIResponse, er
 		return &apiResp, err
 	}
 
-	if bot.Debug {
+	if bot.config.GetDebug() {
 		log.Printf("Endpoint: %s, response: %s\n", endpoint, string(bytes))
 	}
 
@@ -143,7 +133,7 @@ func (bot *BotAPI) MakeRequest(endpoint string, params Params) (*APIResponse, er
 // If debug disabled, just decode http.Response.Body stream to APIResponse struct
 // for efficient memory usage
 func (bot *BotAPI) decodeAPIResponse(responseBody io.Reader, resp *APIResponse) ([]byte, error) {
-	if !bot.Debug {
+	if !bot.config.GetDebug() {
 		dec := json.NewDecoder(responseBody)
 		err := dec.Decode(resp)
 		return nil, err
@@ -217,11 +207,11 @@ func (bot *BotAPI) UploadFiles(endpoint string, params Params, files []RequestFi
 		}
 	}()
 
-	if bot.Debug {
+	if bot.config.GetDebug() {
 		log.Printf("Endpoint: %s, params: %v, with %d files\n", endpoint, params, len(files))
 	}
 
-	method := fmt.Sprintf(bot.apiEndpoint, bot.Token, endpoint)
+	method := fmt.Sprintf(bot.config.GetApiEndpoint(), bot.config.GetToken(), endpoint)
 
 	req, err := http.NewRequest("POST", method, r)
 	if err != nil {
@@ -230,7 +220,7 @@ func (bot *BotAPI) UploadFiles(endpoint string, params Params, files []RequestFi
 
 	req.Header.Set("Content-Type", m.FormDataContentType())
 
-	resp, err := bot.Client.Do(req)
+	resp, err := bot.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -242,7 +232,7 @@ func (bot *BotAPI) UploadFiles(endpoint string, params Params, files []RequestFi
 		return &apiResp, err
 	}
 
-	if bot.Debug {
+	if bot.config.GetDebug() {
 		log.Printf("Endpoint: %s, response: %s\n", endpoint, string(bytes))
 	}
 
@@ -272,7 +262,7 @@ func (bot *BotAPI) GetFileDirectURL(fileID string) (string, error) {
 		return "", err
 	}
 
-	return file.Link(bot.Token), nil
+	return file.Link(bot.config.GetToken()), nil
 }
 
 // GetMe fetches the currently authenticated bot.
@@ -292,12 +282,12 @@ func (bot *BotAPI) GetMe() (User, error) {
 	return user, err
 }
 
-// IsMessageToMe returns true if message directed to this bot.
-//
-// It requires the Message.
-func (bot *BotAPI) IsMessageToMe(message Message) bool {
-	return strings.Contains(message.Text, "@"+bot.Self.UserName)
-}
+//// IsMessageToMe returns true if message directed to this bot.
+////
+//// It requires the Message.
+//func (bot *BotAPI) IsMessageToMe(message Message) bool {
+//	return strings.Contains(message.Text, "@"+bot.Self.UserName)
+//}
 
 func hasFilesNeedingUpload(files []RequestFile) bool {
 	for _, file := range files {
@@ -428,7 +418,7 @@ func (bot *BotAPI) GetWebhookInfo() (WebhookInfo, error) {
 
 // GetUpdatesChan starts and returns a channel for getting updates.
 func (bot *BotAPI) GetUpdatesChan(config UpdateConfig) UpdatesChannel {
-	ch := make(chan Update, bot.Buffer)
+	ch := make(chan Update, bot.buffer)
 
 	go func() {
 		for {
@@ -462,15 +452,16 @@ func (bot *BotAPI) GetUpdatesChan(config UpdateConfig) UpdatesChannel {
 
 // StopReceivingUpdates stops the go routine which receives updates
 func (bot *BotAPI) StopReceivingUpdates() {
-	if bot.Debug {
+	if bot.config.GetDebug() {
 		log.Println("Stopping the update receiver routine...")
 	}
 	close(bot.shutdownChannel)
 }
 
+// TODO: get rid of bot dependancy
 // ListenForWebhook registers a http handler for a webhook.
 func (bot *BotAPI) ListenForWebhook(pattern string) UpdatesChannel {
-	ch := make(chan Update, bot.Buffer)
+	ch := make(chan Update, bot.buffer)
 
 	http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		update, err := bot.HandleUpdate(r)
@@ -488,9 +479,10 @@ func (bot *BotAPI) ListenForWebhook(pattern string) UpdatesChannel {
 	return ch
 }
 
+// TODO: Remove dependancy on bot
 // ListenForWebhookRespReqFormat registers a http handler for a single incoming webhook.
 func (bot *BotAPI) ListenForWebhookRespReqFormat(w http.ResponseWriter, r *http.Request) UpdatesChannel {
-	ch := make(chan Update, bot.Buffer)
+	ch := make(chan Update, bot.buffer)
 
 	func(w http.ResponseWriter, r *http.Request) {
 		defer close(ch)
@@ -509,6 +501,8 @@ func (bot *BotAPI) ListenForWebhookRespReqFormat(w http.ResponseWriter, r *http.
 
 	return ch
 }
+
+// TODO: move it outside of bot struct, it's not related to bot
 
 // HandleUpdate parses and returns update received via webhook
 func (bot *BotAPI) HandleUpdate(r *http.Request) (*Update, error) {

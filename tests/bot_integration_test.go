@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 	"testing"
@@ -52,9 +51,9 @@ func (t testLogger) Printf(format string, v ...interface{}) {
 }
 
 func getBot(t *testing.T) (*tgbotapi.BotAPI, error) {
-	bot, err := tgbotapi.NewBotAPI(TestToken)
+	bot := tgbotapi.NewBot(tgbotapi.NewBotConfig(TestToken, tgbotapi.APIEndpoint, Debug))
+	err := bot.Validate()
 	require.NoError(t, err)
-	bot.Debug = Debug
 
 	logger := testLogger{t}
 	err = tgbotapi.SetLogger(logger)
@@ -64,9 +63,10 @@ func getBot(t *testing.T) (*tgbotapi.BotAPI, error) {
 }
 
 func TestNewBotAPI_notoken(t *testing.T) {
-	bot, err := tgbotapi.NewBotAPI("")
+	bot := tgbotapi.NewBot(tgbotapi.NewBotConfig("", tgbotapi.APIEndpoint, Debug))
+	require.NotNil(t, bot)
+	err := bot.Validate()
 	require.Error(t, err)
-	require.Nil(t, bot)
 }
 
 func TestGetUpdates(t *testing.T) {
@@ -545,13 +545,14 @@ func TestGetUserProfilePhotos(t *testing.T) {
 }
 
 func TestSetWebhookWithCert(t *testing.T) {
+
 	bot, _ := getBot(t)
 
 	time.Sleep(time.Second * 2)
 
 	bot.Request(tgbotapi.DeleteWebhookConfig{})
 
-	wh, err := tgbotapi.NewWebhookWithCert("https://example.com/tgbotapi-test/"+bot.Token, tgbotapi.FilePath("./cert.pem"))
+	wh, err := tgbotapi.NewWebhookWithCert("https://example.com/tgbotapi-test/"+bot.GetConfig().GetToken(), tgbotapi.FilePath("./cert.pem"))
 	require.NoError(t, err)
 	_, err = bot.Request(wh)
 	require.NoError(t, err)
@@ -571,7 +572,7 @@ func TestSetWebhookWithoutCert(t *testing.T) {
 
 	bot.Request(tgbotapi.DeleteWebhookConfig{})
 
-	wh, err := tgbotapi.NewWebhook("https://example.com/tgbotapi-test/" + bot.Token)
+	wh, err := tgbotapi.NewWebhook("https://example.com/tgbotapi-test/" + bot.GetConfig().GetToken())
 	require.NoError(t, err)
 
 	_, err = bot.Request(wh)
@@ -629,40 +630,6 @@ func TestSendWithMediaGroupAudio(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, messages)
 	require.Equal(t, len(cfg.Media), len(messages))
-}
-
-func ExampleInlineConfig() {
-	bot, err := tgbotapi.NewBotAPI("MyAwesomeBotToken") // create new bot
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("Authorized on account %s", bot.Self.UserName)
-
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
-
-	updates := bot.GetUpdatesChan(u)
-
-	for update := range updates {
-		if update.InlineQuery == nil { // if no inline query, ignore it
-			continue
-		}
-
-		article := tgbotapi.NewInlineQueryResultArticle(update.InlineQuery.ID, "Echo", update.InlineQuery.Query)
-		article.Description = update.InlineQuery.Query
-
-		inlineConf := tgbotapi.InlineConfig{
-			InlineQueryID: update.InlineQuery.ID,
-			IsPersonal:    true,
-			CacheTime:     0,
-			Results:       []interface{}{article},
-		}
-
-		if _, err := bot.Request(inlineConf); err != nil {
-			fmt.Println(err)
-		}
-	}
 }
 
 func TestDeleteMessage(t *testing.T) {
