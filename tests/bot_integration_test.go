@@ -658,7 +658,7 @@ func TestPinChatMessage(t *testing.T) {
 	bot, err := getBot(t)
 	require.NoError(t, err)
 
-	msg := tgbotapi.NewMessage(SupergroupChatID, "A test message from the test library in telegram-bot-api")
+	msg := tgbotapi.NewMessage(SupergroupChatID, "Test message. It is supposed to be pinned after test is done. From telegram-bot-api.")
 	msg.ParseMode = tgbotapi.ModeMarkdown
 	message, err := bot.Send(msg)
 	require.NoError(t, err)
@@ -666,7 +666,7 @@ func TestPinChatMessage(t *testing.T) {
 	pinChatMessageConfig := tgbotapi.PinChatMessageConfig{
 		BaseChatMessage: tgbotapi.BaseChatMessage{
 			ChatConfig: tgbotapi.ChatConfig{
-				ChatID: ChatID,
+				ChatID: message.Chat.ID,
 			},
 			MessageID: message.MessageID,
 		},
