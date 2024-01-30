@@ -22,17 +22,19 @@ func ExampleNewBotAPI() {
 	}
 
 	fmt.Printf("Authorized on account %s", usr.UserName)
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
 
-	updates := bot.GetUpdatesChan(u)
+	updCh, err := tgbotapi.NewPollingHandler(bot, tgbotapi.NewUpdate(0)).
+		InitUpdatesChannel()
+	if err != nil {
+		panic(err)
+	}
 
 	// Optional: wait for updates and clear them if you don't want to handle
 	// a large backlog of old messages
 	time.Sleep(time.Millisecond * 500)
-	updates.Clear()
+	updCh.Clear()
 
-	for update := range updates {
+	for update := range updCh {
 		if update.Message == nil {
 			continue
 		}
@@ -86,10 +88,12 @@ func ExampleNewWebhook() {
 		fmt.Printf("failed to set webhook: %s", info.LastErrorMessage)
 	}
 
-	updates := bot.ListenForWebhook("/" + cfg.GetToken())
+	updCh := tgbotapi.NewWebhookHandler(bot).
+		ListenForWebhook("/bot")
+
 	go http.ListenAndServeTLS("0.0.0.0:8443", "cert.pem", "key.pem", nil)
 
-	for update := range updates {
+	for update := range updCh {
 		fmt.Printf("%+v\n", update)
 	}
 }
@@ -128,7 +132,7 @@ func ExampleWebhookHandler() {
 	}
 
 	http.HandleFunc("/"+cfg.GetToken(), func(w http.ResponseWriter, r *http.Request) {
-		update, err := bot.HandleUpdate(r)
+		update, err := tgbotapi.UnmarshalUpdate(r)
 		if err != nil {
 			fmt.Printf("%+v\n", err.Error())
 		} else {
@@ -157,7 +161,10 @@ func ExampleInlineConfig() {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
-	updates := bot.GetUpdatesChan(u)
+	updates, err := tgbotapi.NewPollingHandler(bot, u).InitUpdatesChannel()
+	if err != nil {
+		panic(err)
+	}
 
 	for update := range updates {
 		if update.InlineQuery == nil { // if no inline query, ignore it

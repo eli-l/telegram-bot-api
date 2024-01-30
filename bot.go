@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 )
 
 const DefaultBufferSize = 100
@@ -26,9 +25,6 @@ type BotAPI struct {
 	config   BotConfigI
 	client   HTTPClientI
 	readonly bool
-
-	buffer          int
-	shutdownChannel chan interface{}
 }
 
 // NewBot creates a new BotAPI instance.
@@ -44,10 +40,8 @@ func NewBot(config BotConfigI) *BotAPI {
 // It requires a token, provided by @BotFather on Telegram and API endpoint.
 func NewBotWithClient(config BotConfigI, client HTTPClientI) *BotAPI {
 	bot := &BotAPI{
-		config:          config.(*BotConfig),
-		client:          client,
-		buffer:          DefaultBufferSize,
-		shutdownChannel: make(chan interface{}),
+		config: config.(*BotConfig),
+		client: client,
 	}
 
 	return bot
@@ -383,6 +377,20 @@ func (bot *BotAPI) GetFile(config FileConfig) (File, error) {
 	return file, err
 }
 
+// GetWebhookInfo allows you to fetch information about a webhook and if
+// one currently is set, along with pending update count and error messages.
+func (bot *BotAPI) GetWebhookInfo() (WebhookInfo, error) {
+	resp, err := bot.MakeRequest("getWebhookInfo", nil)
+	if err != nil {
+		return WebhookInfo{}, err
+	}
+
+	var info WebhookInfo
+	err = json.Unmarshal(resp.Result, &info)
+
+	return info, err
+}
+
 // GetUpdates fetches updates.
 // If a WebHook is set, this will not return any data!
 //
@@ -400,124 +408,6 @@ func (bot *BotAPI) GetUpdates(config UpdateConfig) ([]Update, error) {
 	err = json.Unmarshal(resp.Result, &updates)
 
 	return updates, err
-}
-
-// GetWebhookInfo allows you to fetch information about a webhook and if
-// one currently is set, along with pending update count and error messages.
-func (bot *BotAPI) GetWebhookInfo() (WebhookInfo, error) {
-	resp, err := bot.MakeRequest("getWebhookInfo", nil)
-	if err != nil {
-		return WebhookInfo{}, err
-	}
-
-	var info WebhookInfo
-	err = json.Unmarshal(resp.Result, &info)
-
-	return info, err
-}
-
-// GetUpdatesChan starts and returns a channel for getting updates.
-func (bot *BotAPI) GetUpdatesChan(config UpdateConfig) UpdatesChannel {
-	ch := make(chan Update, bot.buffer)
-
-	go func() {
-		for {
-			select {
-			case <-bot.shutdownChannel:
-				close(ch)
-				return
-			default:
-			}
-
-			updates, err := bot.GetUpdates(config)
-			if err != nil {
-				log.Println(err)
-				log.Println("Failed to get updates, retrying in 3 seconds...")
-				time.Sleep(time.Second * 3)
-
-				continue
-			}
-
-			for _, update := range updates {
-				if update.UpdateID >= config.Offset {
-					config.Offset = update.UpdateID + 1
-					ch <- update
-				}
-			}
-		}
-	}()
-
-	return ch
-}
-
-// StopReceivingUpdates stops the go routine which receives updates
-func (bot *BotAPI) StopReceivingUpdates() {
-	if bot.config.GetDebug() {
-		log.Println("Stopping the update receiver routine...")
-	}
-	close(bot.shutdownChannel)
-}
-
-// TODO: get rid of bot dependancy
-// ListenForWebhook registers a http handler for a webhook.
-func (bot *BotAPI) ListenForWebhook(pattern string) UpdatesChannel {
-	ch := make(chan Update, bot.buffer)
-
-	http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
-		update, err := bot.HandleUpdate(r)
-		if err != nil {
-			errMsg, _ := json.Marshal(map[string]string{"error": err.Error()})
-			w.WriteHeader(http.StatusBadRequest)
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(errMsg)
-			return
-		}
-
-		ch <- *update
-	})
-
-	return ch
-}
-
-// TODO: Remove dependancy on bot
-// ListenForWebhookRespReqFormat registers a http handler for a single incoming webhook.
-func (bot *BotAPI) ListenForWebhookRespReqFormat(w http.ResponseWriter, r *http.Request) UpdatesChannel {
-	ch := make(chan Update, bot.buffer)
-
-	func(w http.ResponseWriter, r *http.Request) {
-		defer close(ch)
-
-		update, err := bot.HandleUpdate(r)
-		if err != nil {
-			errMsg, _ := json.Marshal(map[string]string{"error": err.Error()})
-			w.WriteHeader(http.StatusBadRequest)
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(errMsg)
-			return
-		}
-
-		ch <- *update
-	}(w, r)
-
-	return ch
-}
-
-// TODO: move it outside of bot struct, it's not related to bot
-
-// HandleUpdate parses and returns update received via webhook
-func (bot *BotAPI) HandleUpdate(r *http.Request) (*Update, error) {
-	if r.Method != http.MethodPost {
-		err := errors.New("wrong HTTP method required POST")
-		return nil, err
-	}
-
-	var update Update
-	err := json.NewDecoder(r.Body).Decode(&update)
-	if err != nil {
-		return nil, err
-	}
-
-	return &update, nil
 }
 
 // WriteToHTTPResponse writes the request to the HTTP ResponseWriter.
