@@ -36,7 +36,8 @@ func expectGetMe(t *testing.T, c *MockHTTPClient) {
 }
 
 func TestNewBotInstance_WithEmptyToken(t *testing.T) {
-	_, err := NewBotAPI("")
+	bot := NewBot(NewDefaultBotConfig(""))
+	err := bot.Validate()
 	require.Error(t, err)
 }
 
@@ -94,7 +95,8 @@ func TestGetUpdates(t *testing.T) {
 			return newOKResponse(updateResp), nil
 		})
 
-	bot, err := NewBotAPIWithClient(TestToken, APIEndpoint, client)
+	bot := NewBotWithClient(NewBotConfig(TestToken, APIEndpoint, false), client)
+	err := bot.Validate()
 	require.NoError(t, err)
 
 	u := NewUpdate(0)
@@ -107,25 +109,25 @@ func TestSendWithMessage(t *testing.T) {
 	defer client.ctrl.Finish()
 
 	responseBody := `{
-        "ok": true,
-        "result": {
-            "message_id": 123,
-            "from": {
-                "id": 123456789,
-                "is_bot": true,
-                "first_name": "MyBot",
-                "username": "my_bot"
-            },
-            "chat": {
-                "id": 987654321,
-                "first_name": "John",
-                "username": "john_doe",
-                "type": "private"
-            },
-            "date": 1640001112,
-            "text": "Hello, John!"
-        }
-    }`
+	       "ok": true,
+	       "result": {
+	           "message_id": 123,
+	           "from": {
+	               "id": 123456789,
+	               "is_bot": true,
+	               "first_name": "MyBot",
+	               "username": "my_bot"
+	           },
+	           "chat": {
+	               "id": 987654321,
+	               "first_name": "John",
+	               "username": "john_doe",
+	               "type": "private"
+	           },
+	           "date": 1640001112,
+	           "text": "Hello, John!"
+	       }
+	   }`
 
 	expectGetMe(t, client)
 
@@ -137,7 +139,8 @@ func TestSendWithMessage(t *testing.T) {
 			return newOKResponse(responseBody), nil
 		})
 
-	bot, err := NewBotAPIWithClient(TestToken, APIEndpoint, client)
+	bot := NewBotWithClient(NewBotConfig(TestToken, APIEndpoint, false), client)
+	err := bot.Validate()
 	require.NoError(t, err)
 
 	msg := NewMessage(ChatID, "A test message from the test library in telegram-bot-api")
@@ -151,25 +154,25 @@ func TestSendWithMessageReply(t *testing.T) {
 	defer client.ctrl.Finish()
 
 	responseBody := `{
-        "ok": true,
-        "result": {
-            "message_id": 123,
-            "from": {
-                "id": 123456789,
-                "is_bot": true,
-                "first_name": "MyBot",
-                "username": "my_bot"
-            },
-            "chat": {
-                "id": 987654321,
-                "first_name": "John",
-                "username": "john_doe",
-                "type": "private"
-            },
-            "date": 1640001112,
-            "text": "Hello, John!"
-        }
-    }`
+	       "ok": true,
+	       "result": {
+	           "message_id": 123,
+	           "from": {
+	               "id": 123456789,
+	               "is_bot": true,
+	               "first_name": "MyBot",
+	               "username": "my_bot"
+	           },
+	           "chat": {
+	               "id": 987654321,
+	               "first_name": "John",
+	               "username": "john_doe",
+	               "type": "private"
+	           },
+	           "date": 1640001112,
+	           "text": "Hello, John!"
+	       }
+	   }`
 
 	expectGetMe(t, client)
 
@@ -181,7 +184,8 @@ func TestSendWithMessageReply(t *testing.T) {
 			return newOKResponse(responseBody), nil
 		})
 
-	bot, err := NewBotAPIWithClient(TestToken, APIEndpoint, client)
+	bot := NewBotWithClient(NewBotConfig(TestToken, APIEndpoint, false), client)
+	err := bot.Validate()
 	require.NoError(t, err)
 
 	msg := NewMessage(ChatID, "A test message from the test library in telegram-bot-api")
@@ -196,25 +200,25 @@ func TestCopyMessage(t *testing.T) {
 	expectGetMe(t, client)
 
 	responseBody := `{
-        "ok": true,
-        "result": {
-            "message_id": 123,
-            "from": {
-                "id": 123456789,
-                "is_bot": true,
-                "first_name": "MyBot",
-                "username": "my_bot"
-            },
-            "chat": {
-                "id": 987654321,
-                "first_name": "John",
-                "username": "john_doe",
-                "type": "private"
-            },
-            "date": 1640001112,
-            "text": "Hello, John!"
-        }
-    }`
+	       "ok": true,
+	       "result": {
+	           "message_id": 123,
+	           "from": {
+	               "id": 123456789,
+	               "is_bot": true,
+	               "first_name": "MyBot",
+	               "username": "my_bot"
+	           },
+	           "chat": {
+	               "id": 987654321,
+	               "first_name": "John",
+	               "username": "john_doe",
+	               "type": "private"
+	           },
+	           "date": 1640001112,
+	           "text": "Hello, John!"
+	       }
+	   }`
 
 	client.EXPECT().
 		Do(gomock.Any()).
@@ -232,7 +236,8 @@ func TestCopyMessage(t *testing.T) {
 			return newOKResponse(responseBody), nil
 		})
 
-	bot, err := NewBotAPIWithClient(TestToken, APIEndpoint, client)
+	bot := NewBotWithClient(NewBotConfig(TestToken, APIEndpoint, false), client)
+	err := bot.Validate()
 	require.NoError(t, err)
 
 	msg := NewMessage(ChatID, "A test message from the test library in telegram-bot-api")
@@ -245,7 +250,6 @@ func TestCopyMessage(t *testing.T) {
 
 	require.Equal(t, messageID.MessageID, message.MessageID)
 }
-
 func TestPrepareInputMediaForParams(t *testing.T) {
 	media := []any{
 		NewInputMediaPhoto(FilePath("./image.jpg")),
