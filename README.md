@@ -1,6 +1,14 @@
-# Golang bindings for the Telegram Bot API
+> # Usage
+> If you want to use this fork in the project that imports the original repo, the easiest way is to:
+> - `git submodule add git@github.com:OvyFlash/telegram-bot-api.git telegram-bot-api`
+> - `go mod edit --replace github.com/go-telegram-bot-api/telegram-bot-api/v5=./telegram-bot-api/`
+> - `go mod tidy`
+> And you're ready to go.
+> Notice, that there have been several breaking changes since the telegram bot API v5 was released, so you might need to update your application.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/eli-l/telegram-bot-api/v7.svg)](https://pkg.go.dev/github.com/eli-l/telegram-bot-api/v7)
+
+
 [![Test](https://github.com/go-telegram-bot-api/telegram-bot-api/actions/workflows/test.yml/badge.svg)](https://github.com/go-telegram-bot-api/telegram-bot-api/actions/workflows/test.yml)
 
 All methods are fairly self-explanatory, and reading the [godoc](https://pkg.go.dev/github.com/eli-l/telegram-bot-api/v7) page should
@@ -54,7 +62,7 @@ func main() {
 			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-			msg.ReplyToMessageID = update.Message.MessageID
+			msg.ReplyParameters.MessageID = update.Message.MessageID
 
 			bot.Send(msg)
 		}
