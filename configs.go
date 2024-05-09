@@ -18,6 +18,8 @@ const (
 	APITestEndpoint = "https://api.telegram.org/bot%s/test/%s"
 	// FileEndpoint is the endpoint for downloading a file from Telegram.
 	FileEndpoint = "https://api.telegram.org/file/bot%s/%s"
+	// FileTestEndpoint is the endpoint for downloading a file from Telegram test server.
+	FileTestEndpoint = "https://api.telegram.org/file/bot%s/test/%s"
 )
 
 // Constant values for ChatActions

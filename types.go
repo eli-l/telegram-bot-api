@@ -1859,6 +1859,10 @@ func (f *File) Link(token string) string {
 	return fmt.Sprintf(FileEndpoint, token, f.FilePath)
 }
 
+func (f *File) TestLink(token string) string {
+	return fmt.Sprintf(FileTestEndpoint, token, f.FileID)
+}
+
 // WebAppInfo contains information about a Web App.
 type WebAppInfo struct {
 	// URL is the HTTPS URL of a Web App to be opened with additional data as
