@@ -834,18 +834,20 @@ func NewCallbackWithAlert(id, text string) CallbackConfig {
 }
 
 // NewInvoice creates a new Invoice request to the user.
-func NewInvoice(chatID int64, title, description, payload, providerToken, startParameter, currency string, prices []LabeledPrice) InvoiceConfig {
+func NewInvoice(chatID int64, title, description, payload, providerToken, startParameter, currency string, prices []LabeledPrice, suggestedTipAmounts []int) InvoiceConfig {
 	return InvoiceConfig{
 		BaseChat: BaseChat{
 			ChatConfig: ChatConfig{ChatID: chatID},
 		},
-		Title:          title,
-		Description:    description,
-		Payload:        payload,
-		ProviderToken:  providerToken,
-		StartParameter: startParameter,
-		Currency:       currency,
-		Prices:         prices}
+		Title:               title,
+		Description:         description,
+		Payload:             payload,
+		ProviderToken:       providerToken,
+		StartParameter:      startParameter,
+		Currency:            currency,
+		Prices:              prices,
+		SuggestedTipAmounts: suggestedTipAmounts,
+	}
 }
 
 // NewChatTitle allows you to update the title of a chat.
@@ -933,7 +935,7 @@ func NewDeleteChatPhoto(chatID int64) DeleteChatPhotoConfig {
 }
 
 // NewPoll allows you to create a new poll.
-func NewPoll(chatID int64, question string, options ...string) SendPollConfig {
+func NewPoll(chatID int64, question string, options ...InputPollOption) SendPollConfig {
 	return SendPollConfig{
 		BaseChat: BaseChat{
 			ChatConfig: ChatConfig{ChatID: chatID},
@@ -941,6 +943,13 @@ func NewPoll(chatID int64, question string, options ...string) SendPollConfig {
 		Question:    question,
 		Options:     options,
 		IsAnonymous: true, // This is Telegram's default.
+	}
+}
+
+// NewPollOption allows you to create poll option
+func NewPollOption(text string) InputPollOption {
+	return InputPollOption{
+		Text: text,
 	}
 }
 
@@ -1072,6 +1081,13 @@ func NewSetMyName(languageCode, name string) SetMyNameConfig {
 	return SetMyNameConfig{
 		Name:         name,
 		LanguageCode: languageCode,
+	}
+}
+
+// NewGetBusinessConnection gets business connection request struct
+func NewGetBusinessConnection(id string) GetBusinessConnectionConfig {
+	return GetBusinessConnectionConfig{
+		BusinessConnectionID: BusinessConnectionID(id),
 	}
 }
 

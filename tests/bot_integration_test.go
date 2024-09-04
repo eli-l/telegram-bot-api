@@ -743,7 +743,7 @@ func TestUnpinAllChatMessages(t *testing.T) {
 func TestPolls(t *testing.T) {
 	bot, _ := getBot(t)
 
-	poll := tgbotapi.NewPoll(SupergroupChatID, "Are polls working?", "Yes", "No")
+	poll := tgbotapi.NewPoll(SupergroupChatID, "Are polls working?", tgbotapi.NewPollOption("Yes"), tgbotapi.NewPollOption("No"))
 
 	msg, err := bot.Send(poll)
 	if err != nil {
@@ -873,4 +873,28 @@ func TestSetReaction(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, res)
 	})
+}
+
+func TestSendStarInvoice(t *testing.T) {
+	bot, err := getBot(t)
+	require.NoError(t, err)
+
+	invoice := tgbotapi.NewInvoice(
+		ChatID,
+		"Buy a test coffee",
+		"This is a test message for an integration test",
+		"test-payload",
+		"",
+		"test-start-param",
+		"XTR",
+		[]tgbotapi.LabeledPrice{
+			{
+				Label:  "test",
+				Amount: 5,
+			}},
+		[]int{})
+
+	invoice.PhotoURL = "https://github.com/go-telegram-bot-api/telegram-bot-api/raw/0a3a1c8716c4cd8d26a262af9f12dcbab7f3f28c/tests/image.jpg"
+	_, err = bot.Send(invoice)
+	require.NoError(t, err)
 }

@@ -19,11 +19,13 @@ func (base ChatConfig) paramsWithKey(key string) (Params, error) {
 // BaseChat is base type for all chat config types.
 type BaseChat struct {
 	ChatConfig
-	MessageThreadID     int
-	ProtectContent      bool
-	ReplyMarkup         interface{}
-	DisableNotification bool
-	ReplyParameters     ReplyParameters
+	BusinessConnectionID BusinessConnectionID
+	MessageThreadID      int
+	ProtectContent       bool
+	ReplyMarkup          interface{}
+	DisableNotification  bool
+	MessageEffectID      string // for private chats only
+	ReplyParameters      ReplyParameters
 }
 
 func (chat *BaseChat) params() (Params, error) {
@@ -31,10 +33,16 @@ func (chat *BaseChat) params() (Params, error) {
 	if err != nil {
 		return params, err
 	}
+	p1, err := chat.BusinessConnectionID.params()
+	if err != nil {
+		return params, err
+	}
+	params.Merge(p1)
 
 	params.AddNonZero("message_thread_id", chat.MessageThreadID)
 	params.AddBool("disable_notification", chat.DisableNotification)
 	params.AddBool("protect_content", chat.ProtectContent)
+	params.AddNonEmpty("message_effect_id", chat.MessageEffectID)
 
 	err = params.AddInterface("reply_markup", chat.ReplyMarkup)
 	if err != nil {
@@ -57,8 +65,8 @@ func (file BaseFile) params() (Params, error) {
 // BaseEdit is base type of all chat edits.
 type BaseEdit struct {
 	BaseChatMessage
-	InlineMessageID string
-	ReplyMarkup     *InlineKeyboardMarkup
+	InlineMessageID      string
+	ReplyMarkup          *InlineKeyboardMarkup
 }
 
 func (edit BaseEdit) params() (Params, error) {
@@ -97,7 +105,8 @@ func (spoiler BaseSpoiler) params() (Params, error) {
 // BaseChatMessage is a base type for all messages in chats.
 type BaseChatMessage struct {
 	ChatConfig
-	MessageID int
+	MessageID            int
+	BusinessConnectionID BusinessConnectionID
 }
 
 func (base BaseChatMessage) params() (Params, error) {
@@ -105,9 +114,14 @@ func (base BaseChatMessage) params() (Params, error) {
 	if err != nil {
 		return params, err
 	}
+	p1, err := base.BusinessConnectionID.params()
+	if err != nil {
+		return params, err
+	}
+	params.Merge(p1)
 	params.AddNonZero("message_id", base.MessageID)
 
-	return params, nil
+	return params, err
 }
 
 // BaseChatMessages is a base type for all messages in chats.
